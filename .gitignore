@@ -1,6 +1,6 @@
 # ~~~~~~ Custom entries curated by project team ~~~~~~
-## data_base
-chroma_db/
+# Ignore local vector database
+.chroma_db/
 
 ## big data sets - exclude from repo sync
 datasets/
