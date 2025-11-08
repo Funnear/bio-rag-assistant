@@ -1,28 +1,33 @@
-import streamlit as st
-import asyncio
-from preprocess import *
-from generate_answer import *
+# project libs
+from env_handler import load_paths
+from state_machine import KBState, detect_kb_state
+from streamlit_app import *
 
-def user_interface(retriever):
-    st.title("Biology topic study assistant")
-    st.write("Gene expression activation via micro RNA.")
-
-    question = st.text_input("Ask a question:")
-
-    if question:
-        with st.spinner("Generating response..."):
-            answer = generate_answer_chain(retriever, question)
-
-        st.subheader("Answer to your question:")
-        st.write(f"{answer}")  
 
 def main():
     # initialize environment and data
-    setup_environment()
-    retriever = retrieve_data()
+    datasets_dir, chroma_dir, metadata_path = load_paths()
 
-    # get questions
-    user_interface(retriever)
+    # define KB state
+    kb_state, kb_info = detect_kb_state(datasets_dir, metadata_path)
+    print(f"Knowledge Base State: {kb_state.name}")
+
+    # setup common GUI elements
+    init_user_interface()
+
+    # act according to state
+    if kb_info["total_pdfs"] > 0:
+        processed = kb_info["processed"]
+        total = kb_info["total_pdfs"]
+        coverage = int(processed / total * 100) if total > 0 else 0
+        # display global KB status indicator
+        kb_status_indicator(coverage, processed, total)
+
+    if kb_state in (KBState.NO_DATA, KBState.EMPTY):
+        show_quick_start(datasets_dir)
+
+    elif kb_state in (KBState.UP_TO_DATE, KBState.OUTDATED):
+        show_main_tabs(datasets_dir, kb_info)    
 
 if __name__ == '__main__':
     main()

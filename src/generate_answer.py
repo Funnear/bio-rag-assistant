@@ -1,8 +1,8 @@
 from langchain_community.vectorstores import Chroma
 from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.output_parser import StrOutputParser
-from langchain.schema.runnable import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 
 
 def generate_answer_chain(retriever, question):
@@ -27,7 +27,7 @@ def generate_answer_chain(retriever, question):
     )
 
     # Chain: retrieve -> stuff -> generate
-    docs = retriever.get_relevant_documents(question)
+    docs = retriever.invoke(question)
 
     def format_docs(docs):
         return "\n\n".join(

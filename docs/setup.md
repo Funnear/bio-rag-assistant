@@ -9,12 +9,13 @@ cd bio-rag-assistant; \
 python3 -m venv venv; \
 source venv/bin/activate; \
 pip install --upgrade pip; \
-pip install -r requirements.txt; \
+pip install -r requirements.txt
 ```
 
 2. Start the web app on localhost:
 
 ```bash
+source venv/bin/activate; \
 streamlit run src/main.py
 ```
 
