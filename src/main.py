@@ -19,9 +19,9 @@ def main():
     if kb_info["total_pdfs"] > 0:
         processed = kb_info["processed"]
         total = kb_info["total_pdfs"]
-        coverage = int(processed / total * 100) if total > 0 else 0
+        
         # display global KB status indicator
-        kb_status_indicator(coverage, processed, total)
+        kb_status_indicator(processed, total)
 
     if kb_state in (KBState.NO_DATA, KBState.EMPTY):
         show_quick_start(datasets_dir)

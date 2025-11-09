@@ -69,8 +69,17 @@ Author: [Faniia Prazdnikova](https://www.linkedin.com/in/faniia-prazdnikova-607a
     st.title("🧬 Biology topic study assistant")
     st.subheader("Gene expression activation via microRNA")
 
-def kb_status_indicator(coverage, processed, total):
-    st.info(f"Knowledge base status: {coverage}% ({processed}/{total} documents processed)")
+def kb_status_indicator(processed, total):
+    if total <= 0:
+        raise ValueError("Parameter 'total' must be a positive integer greater than 0.")
+
+    with st.container():
+        coverage_ratio = processed / total
+        coverage_percent = int(coverage_ratio * 100)
+
+        st.markdown("**Knowledge base status**")
+        st.progress(coverage_ratio)  # value between 0.0 and 1.0
+        st.caption(f"{coverage_percent}%  ({processed}/{total} documents processed)")
 
 def show_quick_start(datasets_dir):
     st.caption("Quick start")
@@ -119,24 +128,61 @@ def show_qa_tab():
 
 def show_kb_tab(datasets_dir, kb_info):
     st.caption("Knowledge Base control")
-    st.write(f"Dataset folder: `{datasets_dir}`")
-    st.write(f"Total PDFs: {kb_info['total_pdfs']}")
-    st.write(f"Processed: {kb_info['processed']}")
-    st.write(f"New files: {kb_info['new_files']}")
-    st.write(f"Changed files: {kb_info['changed_files']}")
 
+    total = kb_info["total_pdfs"]
+    processed = kb_info["processed"]
+    new_files = kb_info.get("new_files", [])
+    changed_files = kb_info.get("changed_files", [])
+
+    st.write(f"Dataset folder: `{datasets_dir}`")
+    st.write(f"Total PDFs: {total}")
+    st.write(f"Processed: {processed}")
+
+    # --- Determine if KB needs update and store in session state ---
+    needs_update = bool(new_files or changed_files)
+    st.session_state["kb_needs_update"] = needs_update
+
+    # --- New files list (collapsible if more than 1, hidden if none) ---
+    if new_files:
+        if len(new_files) > 1:
+            with st.expander("🆕 New files detected", expanded=True):
+                st.markdown("\n".join(f"- {name}" for name in new_files))
+        else:
+            st.markdown("**🆕 New file detected:**")
+            st.markdown(f"- {new_files[0]}")
+
+    # --- Changed files list (collapsible if more than 1, hidden if none) ---
+    if changed_files:
+        if len(changed_files) > 1:
+            with st.expander("🔁 Changed files", expanded=True):
+                st.markdown("\n".join(f"- {name}" for name in changed_files))
+        else:
+            st.markdown("**🔁 Changed file:**")
+            st.markdown(f"- {changed_files[0]}")
+
+    # --- Init session flags if missing ---
     if "kb_updating" not in st.session_state:
         st.session_state["kb_updating"] = False
     if "retriever" not in st.session_state:
         st.session_state["retriever"] = None
 
-    if st.button("Update knowledge base"):
+    # --- Update button (disabled if nothing to update) ---
+    btn_label = "Update knowledge base"
+    if needs_update:
+        btn_help = "Process new/changed PDFs and update the index."
+    else:
+        btn_help = "Knowledge base is already up to date."
+
+    if st.button(btn_label, disabled=not needs_update, help=btn_help):
         st.session_state["kb_updating"] = True
         with st.spinner("Detecting and processing new items..."):
             new_retriever = ingest_new_data()
         st.session_state["retriever"] = new_retriever
         st.session_state["kb_updating"] = False
-        st.success("Knowledge base updated successfully! You can now ask questions in the Assistant tab.")
+        st.success(
+            "Knowledge base updated successfully! "
+            "You can now ask questions in the Assistant tab."
+        )
         st.rerun()
 
 def show_main_tabs(datasets_dir, kb_info):

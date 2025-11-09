@@ -1,5 +1,12 @@
+# built-in libs
 from pathlib import Path
+import tempfile
 
+# extra libs
+from pikepdf import Pdf, PdfError
+from pypdf.errors import PdfReadError
+
+# langchain libs
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
@@ -19,13 +26,46 @@ def _build_splitter() -> RecursiveCharacterTextSplitter:
         chunk_overlap=200,   # ~50–60 tokens
     )
 
+def _clean_pdf_to_temp(original_path: Path, tmp_dir: Path) -> Path:
+    """
+    Create a cleaned temporary copy of the given PDF using pikepdf.
+    The original file (with highlights) is left untouched.
+    Returns the path to the cleaned temp file.
+    """
+    clean_path = tmp_dir / original_path.name
+    try:
+        with Pdf.open(original_path) as pdf:
+            pdf.save(clean_path)
+    except PdfError as e:
+        # If cleaning fails, re-raise so caller can decide what to do
+        raise PdfError(f"Failed to clean PDF '{original_path}': {e}") from e
+    return clean_path
+
 
 def _load_pdfs(pdf_paths: list[Path]):
-    """Load all PDFs into a flat list of LangChain Documents."""
+    """Load all PDFs into a flat list of Documents, skipping unreadable files.
+    Each original PDF is first cleaned into a temporary copy.
+    """
     docs = []
-    for path in pdf_paths:
-        loader = PyPDFLoader(str(path))
-        docs.extend(loader.load())
+
+    # temp directory is automatically deleted when context exits
+    with tempfile.TemporaryDirectory() as tmpdir_str:
+        tmpdir = Path(tmpdir_str)
+
+        for path in pdf_paths:
+            try:
+                # 1) make cleaned temp copy
+                clean_path = _clean_pdf_to_temp(path, tmpdir)
+
+                # 2) load from cleaned copy
+                loader = PyPDFLoader(str(clean_path))
+                docs.extend(loader.load())
+
+            except (PdfError, PdfReadError) as e:
+                print(f"[WARN] Skipping problematic PDF '{path.name}': {e}")
+            except Exception as e:
+                print(f"[WARN] Unexpected error for '{path.name}': {e}")
+
     return docs
 
 
