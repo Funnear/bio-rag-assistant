@@ -5,6 +5,9 @@
 ## big data sets - exclude from repo sync
 datasets/
 
+# local metadata
+metadata.json
+
 ## data frame backups
 *.pkl
 
