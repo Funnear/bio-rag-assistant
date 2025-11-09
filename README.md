@@ -5,7 +5,8 @@ Retrieval-Augmented Generation system for exploring scientific publications on g
 For demo purposes copy-paste these sample questions:
 - By what mechanism is gene activation carried out through microRNA?
 - Which proteins are involved in the activation?
-- Does this method have therapeutic applications?
+- Does gene expression activation via microRNA have therapeutic applications?
 
 # Links
+- [Project presentation](./presentation/Presentation.pdf)
 - [Setup](./docs/setup.md)
