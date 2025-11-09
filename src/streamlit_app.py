@@ -1,8 +1,49 @@
+import time
+import re
+from urllib.parse import quote
+
 import streamlit as st
 
 # project libs
 from generate_answer import generate_answer_chain
 from preprocess import init_ingest, ingest_new_data, restore_from_cache
+
+def add_reference_links(answer: str) -> str:
+    """Convert italic references in the References section into Scholar links."""
+
+    # Split into main body and references section
+    marker = "**References:**"
+    if marker not in answer:
+        # No references section -> return unchanged
+        return answer
+
+    body, refs_block = answer.split(marker, maxsplit=1)
+
+    # Process references block line by line
+    lines = refs_block.splitlines()
+    new_lines = []
+
+    # Pattern: italic text with a year, but only within a single line
+    pattern = re.compile(r"\*([^*\n]+?\d{4}[^*\n]*)\*")
+
+    for line in lines:
+        match = pattern.search(line)
+        if not match:
+            new_lines.append(line)
+            continue
+
+        ref_text = match.group(1).strip()
+        url = f"https://scholar.google.com/scholar?q={quote(ref_text)}"
+
+        # Replace only this specific italic reference in this line
+        old = f"*{ref_text}*"
+        new = f"*[{ref_text}]({url})*"
+        new_lines.append(line.replace(old, new, 1))
+
+    refs_block_new = "\n".join(new_lines)
+
+    # Reassemble full answer
+    return body + marker + refs_block_new
 
 def init_user_interface():
     # page config
@@ -64,10 +105,17 @@ def show_qa_tab():
 
     question = st.text_input("Ask a question:")
     if question:
+        start = time.time()
         with st.spinner("Generating response..."):
             answer = generate_answer_chain(retriever, question)
+        elapsed = time.time() - start
+
         st.subheader("Answer to your question:")
-        st.write(answer)
+
+        answer = add_reference_links(answer)
+        st.markdown(answer, unsafe_allow_html=True)
+
+        st.caption(f"✅ Response generated in {elapsed:.2f} seconds")
 
 def show_kb_tab(datasets_dir, kb_info):
     st.caption("Knowledge Base control")
